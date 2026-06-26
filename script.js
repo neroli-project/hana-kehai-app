@@ -20,25 +20,22 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
 // ==========================================================================
-// 👥 【大改造！】URLから自分がだれかを自動判別する仕組み
+// 👥 【進化版】URLから「部屋名」と「自分の名前」を読み取る仕組み
 // ==========================================================================
-// URLの後ろにある「?user=xxxx」を読み取る
 const urlParams = new URLSearchParams(window.location.search);
-let myId = urlParams.get('user');
+let roomId = urlParams.get('room');   // 部屋の合言葉（例: neroli_cafe）
+let myId = urlParams.get('myname');   // 自分の名前（例: neroli）
 
-// もしURLに何も書いてなかったら、とりあえず強制的に「user1」にする
-if (!myId) {
-    myId = "user1";
-}
+// もしURLに入力漏れがあったときのセーフティ
+if (!roomId) roomId = "default_room";
+if (!myId) myId = "user1";
 
-// 自分がuser1なら相手はuser2、自分がuser2なら相手はuser1にする（あべこべ構造）
-const partnerId = (myId === "user1") ? "user2" : "user1";
+console.log(`現在の部屋: 【 ${roomId} 】 / あなたの名前: 【 ${myId} 】`);
 
-console.log(`あなたは現在【 ${myId} 】としてログインしています。相手は【 ${partnerId} 】です。`);
-
-// データベースのピン留め位置も、判別したユーザーに合わせて自動切り替え！
-const myRef = ref(database, 'users/' + myId);
-const partnerRef = ref(database, 'users/' + partnerId);
+// データベースの保存先を『指定した部屋の中の、自分の名前の枠』にする
+const myRef = ref(database, `rooms/${roomId}/users/${myId}`);
+// 部屋全体のデータを監視するためのピン留め
+const roomRef = ref(database, `rooms/${roomId}/users`);
 
 let uploadLimit = 3;
 
@@ -50,7 +47,6 @@ let uploadLimit = 3;
 function saveDataToServer(messageText, effectEmoji) {
     const currentAvatarSrc = document.getElementById('my-avatar-preview').src;
     
-    // 👇【ここを追加！】手元の「いまのあなた：」の文字を書き換える
     const statusElement = document.getElementById('my-current-status');
     if (statusElement) {
         statusElement.innerText = messageText;
@@ -60,13 +56,14 @@ function saveDataToServer(messageText, effectEmoji) {
         avatar: currentAvatarSrc,
         message: messageText,
         effect: effectEmoji || "",
-        checked: false // 相手がまだ見ていないので false にしておく
+        checked: false
     }).then(() => {
         console.log("Firebaseへの送信に成功！:", messageText);
     }).catch((error) => {
         console.error("Firebaseへの送信でエラー:", error);
     });
 }
+
 // エフェクトを画面に出す関数
 function triggerEffect(emojis) {
     const effectLayer = document.getElementById('effect-layer');
@@ -84,21 +81,33 @@ window.openAvatarModal = function() { document.getElementById('avatar-modal').st
 window.closeAvatarModal = function() { document.getElementById('avatar-modal').style.display = 'none'; }
 
 // ==========================================================================
-// 📡 相手のデータをリアルタイムに受信して、画面の「上半分」を書き換える
+// 📡 【進化版】部屋にいる「自分以外の人（相手）」を自動で見つけて画面に映す
 // ==========================================================================
-onValue(partnerRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        if (data.avatar) {
-            document.getElementById('partner-avatar').src = data.avatar;
-        }
-        if (data.message) {
-            document.getElementById('partner-message').innerText = data.message;
-        }
-        if (data.effect && data.checked === false) {
-            triggerEffect(data.effect);
-            // 相手が送ってきたエフェクトを「既読」にする
-            set(ref(database, `users/${partnerId}/checked`), true);
+onValue(roomRef, (snapshot) => {
+    const allUsersData = snapshot.val();
+    if (allUsersData) {
+        // 部屋にいる全員の名前リストを取り出して、自分以外の人の名前（partnerId）を探す
+        const userNames = Object.keys(allUsersData);
+        const partnerId = userNames.find(name => name !== myId);
+        
+        // もし自分以外の相手が見つかったら、その人のデータを画面の上半分に映す！
+        if (partnerId) {
+            const partnerData = allUsersData[partnerId];
+            
+            // 相手の名前を画面に表示（〇〇のいま を書き換える）
+            document.querySelector('#partner-area h2').innerText = `${partnerId} のいま`;
+            
+            if (partnerData.avatar) {
+                document.getElementById('partner-avatar').src = partnerData.avatar;
+            }
+            if (partnerData.message) {
+                document.getElementById('partner-message').innerText = partnerData.message;
+            }
+            if (partnerData.effect && partnerData.checked === false) {
+                triggerEffect(partnerData.effect);
+                // 相手が送ってきたエフェクトを「既読（true）」にする
+                set(ref(database, `rooms/${roomId}/users/${partnerId}/checked`), true);
+            }
         }
     }
 });
@@ -116,10 +125,7 @@ window.changeStatus = function(statusText) {
     else if (statusText.includes('愛してる')) effect = '❤️❤️❤️';
     else if (statusText.includes('大好き')) effect = '💖✨💘';
 
-    // 自分側でも1回再生
     triggerEffect(effect);
-
-    // 自分の最新データをサーバーに送信！
     saveDataToServer(statusText, effect);
 }
 
@@ -132,6 +138,7 @@ window.sendStatus = function() {
         alert("メッセージを入力してね！");
         return;
     }
+    document.getElementById('my-current-status').innerText = messageInput.value;
     triggerEffect('✨🎉✨');
     saveDataToServer(messageInput.value, '✨🎉✨');
     messageInput.value = "";
