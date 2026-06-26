@@ -22,23 +22,25 @@
 
         <hr>
 
-        <div id="my-area">
-            <div style="margin-bottom: 15px; background: rgba(255,255,255,0.8); padding: 8px; border-radius: 8px;">
-                <input type="text" id="my-name-input" placeholder="あなたの名前" style="padding: 5px; width: 120px; border: 1px solid #ccc; border-radius: 4px;">
-                <button onclick="changeMyName()" style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">名前を変更</button>
+        <div id="my-area" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            
+            <div style="margin-bottom: 15px; background: rgba(255,255,255,0.8); padding: 8px 12px; border-radius: 8px; display: inline-block;">
+                <input type="text" id="my-name-input" placeholder="あなたの名前" style="padding: 6px; width: 120px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+                <button onclick="changeMyName()" style="padding: 6px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; font-weight: bold; margin-left: 5px;">名前を変更</button>
             </div>
 
-            <div class="avatar-container" onclick="openAvatarModal()">
-                <img id="my-avatar-preview" src="image/default.png" alt="自分のアバター">
+            <div class="avatar-container" onclick="openAvatarModal()" style="margin: 0 auto; cursor: pointer; position: relative;">
+                <img id="my-avatar-preview" src="image/default.png" alt="自分のアバター" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
                 <div class="edit-overlay">変更</div>
             </div>
             
-            <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">本日あと <span id="upload-count">3</span> 回変更できます</p>
-            <p style="font-size: 0.9rem; color: #4caf50; font-weight: bold; margin-top: 8px;">いまのあなた：<span id="my-current-status">未設定</span></p>
+            <p style="font-size: 0.8rem; color: #888; margin-top: 5px; margin-bottom: 2px;">本日あと <span id="upload-count">3</span> 回変更できます</p>
+            
+            <p style="font-size: 0.9rem; color: #4caf50; font-weight: bold; margin-top: 5px; margin-bottom: 15px;">いまのあなた：<span id="my-current-status">未設定</span></p>
 
             <div class="status-buttons">
                 <button onclick="changeStatus('🏠 今家でまったり中')">☕️ まったり</button>
-                <button onclick="changeStatus('🔥 仕事頑張ってる！')">💪 お仕事</button>
+                <button onclick="changeStatus('🔥 工作頑張ってる！')">💪 お仕事</button>
                 <button onclick="changeStatus('💻 パソコンに集中⚡️')">💻 PC中</button>
                 <button onclick="changeStatus('🍰 おやつタイム🧋')">🍰 おやつ</button>
                 <button onclick="changeStatus('🌙 もう寝るね〜💤')">🌙 寝るね</button>
@@ -46,13 +48,13 @@
                 <button onclick="changeStatus('💖 いつも大好き！')">💖 大好き</button>
             </div>
 
-            <div class="message-input-area">
-                <input type="text" id="my-message-text" placeholder="今の気持ちを自由に書いてね">
-                <button onclick="sendStatus()">送信</button>
+            <div class="message-input-area" style="margin-top: 15px; width: 100%;">
+                <input type="text" id="my-message-text" placeholder="今の気持ちを自由に書いてね" style="padding: 8px; width: 70%; border: 1px solid #ccc; border-radius: 4px;">
+                <button onclick="sendStatus()" style="padding: 8px 15px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">送信</button>
             </div>
             
-            <div style="margin-top: 15px;">
-                <label for="bg-photo-input" style="background-color: #f0f0f0; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🖼️ 背景写真を変える</label>
+            <div style="margin-top: 15px; margin-bottom: 20px;">
+                <label for="bg-photo-input" style="background-color: #f0f0f0; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; border: 1px solid #ccc;">🖼️ 背景写真を変える</label>
                 <input type="file" id="bg-photo-input" accept="image/*" onchange="uploadBackground()" style="display: none;">
             </div>
         </div>
