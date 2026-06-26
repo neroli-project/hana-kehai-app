@@ -20,24 +20,47 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
 // ==========================================================================
-// 👥 【進化版】URLから「部屋名」と「自分の名前」を読み取る仕組み
+// 👥 URLから「部屋名」と「自分の名前」を読み取る仕組み
 // ==========================================================================
 const urlParams = new URLSearchParams(window.location.search);
-let roomId = urlParams.get('room');   // 部屋の合言葉（例: neroli_cafe）
-let myId = urlParams.get('myname');   // 自分の名前（例: neroli）
+let roomId = urlParams.get('room');   
+let myId = urlParams.get('myname');   
 
-// もしURLに入力漏れがあったときのセーフティ
 if (!roomId) roomId = "default_room";
 if (!myId) myId = "user1";
 
 console.log(`現在の部屋: 【 ${roomId} 】 / あなたの名前: 【 ${myId} 】`);
 
-// データベースの保存先を『指定した部屋の中の、自分の名前の枠』にする
+// 画面の入力欄に、いまの名前をあらかじめ入れておく
+document.addEventListener("DOMContentLoaded", () => {
+    const nameInput = document.getElementById('my-name-input');
+    if (nameInput) nameInput.value = myId;
+});
+
+// データベースの保存先
 const myRef = ref(database, `rooms/${roomId}/users/${myId}`);
-// 部屋全体のデータを監視するためのピン留め
 const roomRef = ref(database, `rooms/${roomId}/users`);
 
 let uploadLimit = 3;
+
+// ==========================================================================
+// 🛠️ 【新機能】画面からスマートに名前を変更する関数
+// ==========================================================================
+window.changeMyName = function() {
+    const newName = document.getElementById('my-name-input').value.trim();
+    if (newName === "") {
+        alert("名前を入力してね！");
+        return;
+    }
+    if (newName === myId) {
+        alert("同じ名前だよ！");
+        return;
+    }
+    
+    // URLの「myname=〇〇」の部分だけを新しい名前に書き換えて、画面を自動リロードする
+    urlParams.set('myname', newName);
+    window.location.search = urlParams.toString();
+}
 
 // ==========================================================================
 // 🛠️ 共通で使う大事な関数
@@ -81,20 +104,17 @@ window.openAvatarModal = function() { document.getElementById('avatar-modal').st
 window.closeAvatarModal = function() { document.getElementById('avatar-modal').style.display = 'none'; }
 
 // ==========================================================================
-// 📡 【進化版】部屋にいる「自分以外の人（相手）」を自動で見つけて画面に映す
+// 📡 部屋にいる「自分以外の人（相手）」を自動で見つけて画面に映す
 // ==========================================================================
 onValue(roomRef, (snapshot) => {
     const allUsersData = snapshot.val();
     if (allUsersData) {
-        // 部屋にいる全員の名前リストを取り出して、自分以外の人の名前（partnerId）を探す
         const userNames = Object.keys(allUsersData);
         const partnerId = userNames.find(name => name !== myId);
         
-        // もし自分以外の相手が見つかったら、その人のデータを画面の上半分に映す！
         if (partnerId) {
             const partnerData = allUsersData[partnerId];
             
-            // 相手の名前を画面に表示（〇〇のいま を書き換える）
             document.querySelector('#partner-area h2').innerText = `${partnerId} のいま`;
             
             if (partnerData.avatar) {
@@ -105,7 +125,6 @@ onValue(roomRef, (snapshot) => {
             }
             if (partnerData.effect && partnerData.checked === false) {
                 triggerEffect(partnerData.effect);
-                // 相手が送ってきたエフェクトを「既読（true）」にする
                 set(ref(database, `rooms/${roomId}/users/${partnerId}/checked`), true);
             }
         }
