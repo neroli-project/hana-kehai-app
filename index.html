@@ -13,7 +13,9 @@
         <div id="partner-area">
             <h2>相手 のいま</h2>
             <div class="avatar-container">
-                <img id="partner-avatar" src="image/woman2.png" alt="相手のアバター" onerror="this.src='https://placehold.co/100x100?text=Partner'">
+                <div class="avatar-circle">
+                    <img id="partner-avatar" src="image/woman2.png" alt="相手のアバター" onerror="this.src='https://placehold.co/100x100?text=Partner'">
+                </div>
             </div>
             <div class="bubble">
                 <p id="partner-message">接続を待っているよ...</p>
@@ -25,7 +27,9 @@
         <div id="my-area">
             
             <div class="avatar-container" onclick="openAvatarModal()" style="cursor: pointer; position: relative; margin: 0 auto;">
-                <img id="my-avatar-preview" src="image/woman1.png" alt="自分のアバター" onerror="this.src='https://placehold.co/100x100?text=Me'">
+                <div class="avatar-circle">
+                    <img id="my-avatar-preview" src="image/woman1.png" alt="自分のアバター" onerror="this.src='https://placehold.co/100x100?text=Me'">
+                </div>
                 <div class="edit-overlay">変更</div>
             </div>
             
@@ -65,9 +69,15 @@
         <div class="modal-content">
             <h3>アバターを選んでね</h3>
             <div class="preset-avatars">
-                <img src="image/woman1.png" alt="1" onclick="selectPresetAvatar('woman1')" onerror="this.src='https://placehold.co/60x60?text=1'">
-                <img src="image/woman2.png" alt="2" onclick="selectPresetAvatar('woman2')" onerror="this.src='https://placehold.co/60x60?text=2'">
-                <img src="image/woman3.png" alt="3" onclick="selectPresetAvatar('woman3')" onerror="this.src='https://placehold.co/60x60?text=3'">
+                <div class="preset-circle" onclick="selectPresetAvatar('woman1')">
+                    <img src="image/woman1.png" alt="1" onerror="this.src='https://placehold.co/60x60?text=1'">
+                </div>
+                <div class="preset-circle" onclick="selectPresetAvatar('woman2')">
+                    <img src="image/woman2.png" alt="2" onerror="this.src='https://placehold.co/60x60?text=2'">
+                </div>
+                <div class="preset-circle" onclick="selectPresetAvatar('woman3')">
+                    <img src="image/woman3.png" alt="3" onerror="this.src='https://placehold.co/60x60?text=3'">
+                </div>
             </div>
             <div style="margin-top: 20px;">
                 <label for="avatar-file-input" style="background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer;">📸 写真をアップロード</label>
