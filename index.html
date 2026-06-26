@@ -12,10 +12,8 @@
 
         <div id="partner-area">
             <h2>相手 のいま</h2>
-            <div class="avatar-container">
-                <div class="avatar-circle">
-                    <img id="partner-avatar" src="image/woman2.png" alt="相手のアバター" onerror="this.src='https://placehold.co/100x100?text=Partner'">
-                </div>
+            <div class="avatar-container" style="text-align: center; margin: 10px 0;">
+                <img id="partner-avatar" src="image/woman2.png" alt="相手のアバター" onerror="this.src='https://placehold.co/100x100?text=Partner'" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
             </div>
             <div class="bubble">
                 <p id="partner-message">接続を待っているよ...</p>
@@ -24,17 +22,14 @@
 
         <hr>
 
-        <div id="my-area">
+        <div id="my-area" style="text-align: center;">
             
-            <div class="avatar-container" onclick="openAvatarModal()" style="cursor: pointer; position: relative; margin: 0 auto;">
-                <div class="avatar-circle">
-                    <img id="my-avatar-preview" src="image/woman1.png" alt="自分のアバター" onerror="this.src='https://placehold.co/100x100?text=Me'">
-                </div>
-                <div class="edit-overlay">変更</div>
+            <div class="avatar-container" onclick="openAvatarModal()" style="cursor: pointer; position: relative; margin: 10px auto; width: 100px;">
+                <img id="my-avatar-preview" src="image/woman1.png" alt="自分のアバター" onerror="this.src='https://placehold.co/100x100?text=Me'" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
+                <div class="edit-overlay" style="position: absolute; bottom: 0; background: rgba(0,0,0,0.5); color: white; width: 100%; font-size: 0.8rem; border-bottom-left-radius: 50%; border-bottom-right-radius: 50%;">変更</div>
             </div>
             
             <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">本日あと <span id="upload-count">3</span> 回変更できます</p>
-            
             <p style="font-size: 0.9rem; color: #4caf50; font-weight: bold; margin-top: 5px;">いまのあなた：<span id="my-current-status">未設定</span></p>
 
             <div class="status-buttons">
@@ -47,7 +42,7 @@
                 <button onclick="changeStatus('💖 いつも大好き！')">💖 大好き</button>
             </div>
 
-            <div class="message-input-area">
+            <div class="message-input-area" style="margin-top: 15px;">
                 <input type="text" id="my-message-text" placeholder="今の気持ちを自由に書いてね">
                 <button onclick="sendStatus()">送信</button>
             </div>
@@ -65,25 +60,19 @@
         </div>
     </div>
 
-    <div id="avatar-modal" class="modal">
-        <div class="modal-content">
+    <div id="avatar-modal" class="modal" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:100;">
+        <div class="modal-content" style="background:white; padding:20px; border-radius:8px; text-align:center;">
             <h3>アバターを選んでね</h3>
-            <div class="preset-avatars">
-                <div class="preset-circle" onclick="selectPresetAvatar('woman1')">
-                    <img src="image/woman1.png" alt="1" onerror="this.src='https://placehold.co/60x60?text=1'">
-                </div>
-                <div class="preset-circle" onclick="selectPresetAvatar('woman2')">
-                    <img src="image/woman2.png" alt="2" onerror="this.src='https://placehold.co/60x60?text=2'">
-                </div>
-                <div class="preset-circle" onclick="selectPresetAvatar('woman3')">
-                    <img src="image/woman3.png" alt="3" onerror="this.src='https://placehold.co/60x60?text=3'">
-                </div>
+            <div class="preset-avatars" style="display: flex; gap: 10px; justify-content: center;">
+                <img src="image/woman1.png" alt="1" onclick="selectPresetAvatar('woman1')" style="width:60px; height:60px; border-radius:50%; cursor:pointer; object-fit:cover;">
+                <img src="image/woman2.png" alt="2" onclick="selectPresetAvatar('woman2')" style="width:60px; height:60px; border-radius:50%; cursor:pointer; object-fit:cover;">
+                <img src="image/woman3.png" alt="3" onclick="selectPresetAvatar('woman3')" style="width:60px; height:60px; border-radius:50%; cursor:pointer; object-fit:cover;">
             </div>
             <div style="margin-top: 20px;">
                 <label for="avatar-file-input" style="background-color: #4CAF50; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer;">📸 写真をアップロード</label>
                 <input type="file" id="avatar-file-input" accept="image/*" onchange="uploadMyAvatarPhoto()" style="display: none;">
             </div>
-            <button onclick="closeAvatarModal()" style="margin-top: 20px; background: #aaa; color: white; border: none; padding: 5px 10px; border-radius: 4px;">閉じる</button>
+            <button onclick="closeAvatarModal()" style="margin-top: 20px; background: #aaa; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">閉じる</button>
         </div>
     </div>
 
