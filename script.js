@@ -207,3 +207,26 @@ window.uploadBackground = function() {
         reader.readAsDataURL(photoInput.files[0]);
     }
 }
+
+// ==========================================================================
+// 📡 【新機能】ページを開いた時に、自分の最新データをFirebaseから読み込んで復活させる
+// ==========================================================================
+onValue(myRef, (snapshot) => {
+    const myData = snapshot.val();
+    if (myData) {
+        // 1. 保存されていたメッセージを復活
+        if (myData.message) {
+            const statusElement = document.getElementById('my-current-status');
+            if (statusElement) {
+                statusElement.innerText = myData.message;
+            }
+        }
+        // 2. 保存されていたアバター画像を復活
+        if (myData.avatar) {
+            const avatarElement = document.getElementById('my-avatar-preview');
+            if (avatarElement) {
+                avatarElement.src = myData.avatar;
+            }
+        }
+    }
+});
