@@ -231,29 +231,26 @@ onValue(myRef, (snapshot) => {
 });
 
 // ==========================================================================
-// 🔍 【新機能】写真をタップした時に大きく拡大する魔法
+// 🔍 【追加コード】写真をタップした時に大きく拡大する魔法
 // ==========================================================================
-
-// 写真を拡大して表示する関数
 window.zoomPhoto = function(element) {
     const modal = document.getElementById('photo-zoom-modal');
     const zoomedImg = document.getElementById('zoomed-photo');
     if (modal && zoomedImg) {
-        zoomedImg.src = element.src; // タップされた画像のURLをコピー
-        modal.style.display = 'flex'; // 拡大画面を表示！
+        zoomedImg.src = element.src;
+        modal.style.display = 'flex';
     }
 }
 
-// 拡大画面を閉じる関数
 window.closeZoomModal = function() {
     const modal = document.getElementById('photo-zoom-modal');
     if (modal) {
-        modal.style.display = 'none'; // 拡大画面を非表示に！
+        modal.style.display = 'none';
     }
 }
 
 // ==========================================================================
-// 📸 【新機能】インスタ風画面切り替え（タブ機能）の魔法
+// 📸 【追加コード】インスタ風画面切り替え（タブ機能）の魔法
 // ==========================================================================
 window.switchTab = function(tabName) {
     const myArea = document.getElementById('my-area');
@@ -262,25 +259,27 @@ window.switchTab = function(tabName) {
     const tabPartnerBtn = document.getElementById('tab-partner');
 
     if (tabName === 'my') {
-        // 「じぶん」を表示、相手を隠す
-        myArea.style.display = 'block';
-        partnerArea.style.display = 'none';
-        
-        // ボタンの色をアクティブ（緑）にする
-        tabMyBtn.style.color = '#4caf50';
-        tabMyBtn.style.borderBottom = '3px solid #4caf50';
-        tabPartnerBtn.style.color = '#888';
-        tabPartnerBtn.style.borderBottom = '3px solid transparent';
+        if (myArea) myArea.style.display = 'block';
+        if (partnerArea) partnerArea.style.display = 'none';
+        if (tabMyBtn) {
+            tabMyBtn.style.color = '#4caf50';
+            tabMyBtn.style.borderBottom = '3px solid #4caf50';
+        }
+        if (tabPartnerBtn) {
+            tabPartnerBtn.style.color = '#888';
+            tabPartnerBtn.style.borderBottom = '3px solid transparent';
+        }
     } else {
-        // 「あいて」を表示、自分を隠す
-        myArea.style.display = 'none';
-        partnerArea.style.display = 'block';
-        
-        // ボタンの色をアクティブ（緑）にする
-        tabPartnerBtn.style.color = '#4caf50';
-        tabPartnerBtn.style.borderBottom = '3px solid #4caf50';
-        tabMyBtn.style.color = '#888';
-        tabMyBtn.style.borderBottom = '3px solid transparent';
+        if (myArea) myArea.style.display = 'none';
+        if (partnerArea) partnerArea.style.display = 'block';
+        if (tabPartnerBtn) {
+            tabPartnerBtn.style.color = '#4caf50';
+            tabPartnerBtn.style.borderBottom = '3px solid #4caf50';
+        }
+        if (tabMyBtn) {
+            tabMyBtn.style.color = '#888';
+            tabMyBtn.style.borderBottom = '3px solid transparent';
+        }
     }
 }
 
