@@ -8,25 +8,34 @@
 </head>
 <body>
 
-    <div id="app-container">
+<div id="app-container">
         
         <h1>Kehai.</h1>
 
-        <section id="partner-area">
-            <h2>〇〇のいま</h2>
-            <img id="partner-avatar" src="image/woman1.png" alt="相手のキャラ">
-            <p id="partner-message">いまなにしてるかな？</p>
+        <div class="tab-container" style="display: flex; justify-content: space-around; background: rgba(255,255,255,0.8); padding: 10px 0; border-bottom: 1px solid #ddd; margin-bottom: 15px; border-radius: 8px 8px 0 0;">
+            <button id="tab-my" onclick="switchTab('my')" style="flex: 1; background: none; border: none; font-size: 1rem; font-weight: bold; color: #4caf50; cursor: pointer; padding: 10px 0; border-bottom: 3px solid #4caf50; transition: all 0.3s;">じぶん 👤</button>
+            <button id="tab-partner" onclick="switchTab('partner')" style="flex: 1; background: none; border: none; font-size: 1rem; font-weight: bold; color: #888; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s;">あいて 👥</button>
+        </div>
+
+        <section id="partner-area" style="display: block; padding-top: 20px; min-height: 480px; box-sizing: border-box;">
+            <h2>あいて のいま</h2>
+            <div style="text-align: center; margin: 15px 0;">
+                <img id="partner-avatar" src="image/woman1.png" alt="相手のキャラ" onclick="zoomPhoto(this)" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #4caf50; cursor: zoom-in; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            </div>
+            <p style="font-size: 0.9rem; color: #888; font-weight: bold; margin-top: 8px; text-align: center;">あいてのいま</p>
+            
+            <p id="partner-message" style="font-size: 1.1rem; font-weight: bold; color: #333; text-align: center; margin-top: 10px; background: #f0f0f0; padding: 12px 20px; border-radius: 15px; display: inline-block; min-width: 260px; max-width: 90%; margin-left: 50%; transform: translateX(-50%); box-sizing: border-box;">いまなにしてるかな？</p>
+            
             <div id="effect-layer"></div>
         </section>
-
-        <section id="my-area">
+        <section id="my-area" style="display: none;">
             
             <h2>じぶんのアバター（タップして変更）</h2>
             <div style="text-align: center; margin: 15px 0;">
                 <img id="my-avatar-preview" src="image/woman1.png" alt="自分自身のアバター" onclick="openAvatarModal()" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #4caf50; cursor: pointer; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                 <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">本日あと <span id="upload-count">3</span> 回変更できます</p>
 
-<p style="font-size: 0.9rem; color: #4caf50; font-weight: bold; margin-top: 8px;">いまのあなた：<span id="my-current-status">未設定</span></p>
+                <p style="font-size: 0.9rem; color: #4caf50; font-weight: bold; margin-top: 8px;">いまのあなた：<span id="my-current-status">未設定</span></p>
             </div>
             
             <h2>いまの気配を伝える（エフェクト付き！）</h2>
@@ -38,6 +47,7 @@
                 <button onclick="changeStatus('🌙 これから寝るね、おやすみ')">🌙 寝るね</button>
                 <button onclick="changeStatus('❤️ 愛してる')">❤️ 愛してる</button>
                 <button onclick="changeStatus('✨ 大好き')">✨ 大好き</button>
+
             </div>
 
             <div class="message-input">
@@ -45,11 +55,8 @@
                 <button onclick="sendStatus()">送信</button>
             </div>
 
-            <div class="photo-upload" style="margin-bottom: 15px;">
-                <input type="file" id="bg-photo-input" accept="image/*" style="display: none;" onchange="uploadBackground()">
-                <button onclick="document.getElementById('bg-photo-input').click()" style="background-color: #81c784; box-shadow: 0 3px 0 #66bb6a; width: 100%;">背景画像を変更する</button>
-            </div>
-        </section>
+           
+                    </section>
 
     </div>
 
@@ -71,6 +78,10 @@
             </div>
             <button onclick="closeAvatarModal()" style="background-color: #9e9e9e; box-shadow: 0 3px 0 #757575; width: 100%;">閉じる</button>
         </div>
+    </div>
+
+    <div id="photo-zoom-modal" onclick="closeZoomModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; align-items: center; justify-content: center; cursor: zoom-out;">
+        <img id="zoomed-photo" src="" alt="拡大写真" style="max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); object-fit: contain;">
     </div>
 
     <script type="module" src="script.js"></script>

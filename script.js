@@ -128,7 +128,6 @@ window.changeStatus = function(statusText) {
     triggerEffect(effect);
     saveDataToServer(statusText, effect);
 }
-
 // ==========================================================================
 // 4. 自由入力のメッセージ送信
 // ==========================================================================
@@ -228,5 +227,66 @@ onValue(myRef, (snapshot) => {
                 avatarElement.src = myData.avatar;
             }
         }
+    }
+});
+
+// ==========================================================================
+// 🔍 【新機能】写真をタップした時に大きく拡大する魔法
+// ==========================================================================
+
+// 写真を拡大して表示する関数
+window.zoomPhoto = function(element) {
+    const modal = document.getElementById('photo-zoom-modal');
+    const zoomedImg = document.getElementById('zoomed-photo');
+    if (modal && zoomedImg) {
+        zoomedImg.src = element.src; // タップされた画像のURLをコピー
+        modal.style.display = 'flex'; // 拡大画面を表示！
+    }
+}
+
+// 拡大画面を閉じる関数
+window.closeZoomModal = function() {
+    const modal = document.getElementById('photo-zoom-modal');
+    if (modal) {
+        modal.style.display = 'none'; // 拡大画面を非表示に！
+    }
+}
+
+// ==========================================================================
+// 📸 【新機能】インスタ風画面切り替え（タブ機能）の魔法
+// ==========================================================================
+window.switchTab = function(tabName) {
+    const myArea = document.getElementById('my-area');
+    const partnerArea = document.getElementById('partner-area');
+    const tabMyBtn = document.getElementById('tab-my');
+    const tabPartnerBtn = document.getElementById('tab-partner');
+
+    if (tabName === 'my') {
+        // 「じぶん」を表示、相手を隠す
+        myArea.style.display = 'block';
+        partnerArea.style.display = 'none';
+        
+        // ボタンの色をアクティブ（緑）にする
+        tabMyBtn.style.color = '#4caf50';
+        tabMyBtn.style.borderBottom = '3px solid #4caf50';
+        tabPartnerBtn.style.color = '#888';
+        tabPartnerBtn.style.borderBottom = '3px solid transparent';
+    } else {
+        // 「あいて」を表示、自分を隠す
+        myArea.style.display = 'none';
+        partnerArea.style.display = 'block';
+        
+        // ボタンの色をアクティブ（緑）にする
+        tabPartnerBtn.style.color = '#4caf50';
+        tabPartnerBtn.style.borderBottom = '3px solid #4caf50';
+        tabMyBtn.style.color = '#888';
+        tabMyBtn.style.borderBottom = '3px solid transparent';
+    }
+}
+
+// アプリを開いた瞬間に、自動で「あいて」のタブを最初に選んでおく魔法
+window.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.switchTab === 'function') {
+        window.switchTab('partner');
     }
 });
