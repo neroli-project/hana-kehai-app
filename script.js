@@ -391,21 +391,23 @@ window.toggleCustomMode = function() {
     }
 }
 
-// 2. 6つのアバター枠がクリックされたときの魔法
+// 2. 6つのアバター枠がクリックされたときの魔法（パッと閉じる魔法を追加！）
 window.handleAvatarClick = function(index, presetId) {
     if (window.isEditMode) {
-        // カスタムモードなら、スマホのファイル選択（カメラロール）を開く
+        // 【カスタムモード】なら、スマホのファイル選択（カメラロール）を開く
         window.currentEditingIndex = index;
         const fileInput = document.getElementById('avatar-file-input');
         if (fileInput) fileInput.click(); 
     } else {
-        // 通常モードなら、アバターを確定してFirebaseへ送信
+        // 【通常モード】なら、アバターを確定してFirebaseへ送信
         const img = document.getElementById(`preset-img-${index}`);
         const customSrc = img ? img.src : null;
         window.selectPresetAvatar(presetId, customSrc);
+
+        // ✨【ここを追加！】アバターを決定したら、ポップアップを自動でパッと閉じる！
+        window.closeAvatarModal();
     }
 }
-
 // 3. 【重要】自分の写真をアップロードしたときの処理（カスタム枠の上書きにも対応！）
 window.uploadOwnPhoto = function(input) {
     if (typeof checkUploadLimit === "function" && !checkUploadLimit()) {
