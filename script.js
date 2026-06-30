@@ -146,17 +146,21 @@ window.sendStatus = function() {
 // ==========================================================================
 // 5. アバター変更（プリセット）
 // ==========================================================================
-window.selectPresetAvatar = function(avatarName) {
-    if (!checkUploadLimit()) return;
-    document.getElementById('my-avatar-preview').src = `image/${avatarName}.png`;
+// ✨ アバターを選んだときの処理（カスタム画像にも対応版！）
+window.selectPresetAvatar = function(presetId, customSrc) {
+    // もしカスタムされた画像URL（Base64など）があればそれを使い、なければ元の画像パスを使う
+    const finalAvatarSrc = customSrc || `image/${presetId}.png`;
     
+    // 自分のプレビュー画像を書き換える
+    document.getElementById('my-avatar-preview').src = finalAvatarSrc;
+    
+    // サーバー（Firebase）に保存する
     const currentMsg = "アバターを変えたよ";
-    saveDataToServer(currentMsg, "");
+    window.saveDataToServer(currentMsg, "");
     
-    reduceUploadCount();
-    closeAvatarModal();
+    // ポップアップを閉じる
+    window.closeAvatarModal();
 }
-
 // ==========================================================================
 // 6. アバター変更（写真アップロード）
 // ==========================================================================
@@ -358,15 +362,22 @@ window.uploadOwnPhoto = function(input) {
     }
 }
 
-// 3. 【重要】アプリ起動時にカスタムした画像を読み込む
-function loadCustomAvatars() {
+// 3. 【重要】アプリ起動時にカスタムした画像を自動で読み込む魔法
+window.loadCustomAvatars = function() {
     for (let i = 1; i <= 6; i++) {
         const savedData = localStorage.getItem(`customAvatar_${i}`);
         if (savedData) {
-            document.getElementById(`preset-img-${i}`).src = savedData;
+            const presetImg = document.getElementById(`preset-img-${i}`);
+            if (presetImg) {
+                presetImg.src = savedData;
+            }
         }
     }
 }
 
-// 起動時に呼び出す（Firebase接続後など、適切なタイミングで）
-// loadCustomAvatars();
+// 💡 画面が読み込まれた瞬間に、過去にカスタムした画像を自動でバイーンと反映させるよ！
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        window.loadCustomAvatars();
+    }, 500); // 念のため少しだけ待ってから確実に実行するおまじない
+});
