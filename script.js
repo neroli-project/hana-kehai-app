@@ -289,3 +289,84 @@ window.addEventListener('DOMContentLoaded', () => {
         window.switchTab('partner');
     }
 });
+
+// ==========================================================================
+// 💡 【追加】アバターの6枚枠をカスタムする魔法（LocalStorageへ保存）
+// ==========================================================================
+let isEditMode = false;
+let currentEditingIndex = -1; // 1〜6のどの枠を編集しているか
+
+// 1. カスタムモードのON/OFF
+window.toggleCustomMode = function() {
+    isEditMode = !isEditMode;
+    const grid = document.getElementById('preset-avatar-grid');
+    const button = document.getElementById('toggle-custom-mode');
+    
+    if (isEditMode) {
+        grid.classList.add('edit-mode');
+        button.innerText = "アバターを選ぶモードに戻る";
+        button.style.backgroundColor = "#ff9800"; // 色を変えてアピール
+        button.style.boxShadow = "0 3px 0 #e68a00";
+    } else {
+        grid.classList.remove('edit-mode');
+        button.innerText = "枠の写真をカスタムする";
+        button.style.backgroundColor = "#888";
+        button.style.boxShadow = "0 3px 0 #666";
+    }
+}
+
+// 2. アバター枠をクリックした時の処理（通常モードかカスタムモードかで切り替え）
+window.handleAvatarClick = function(index, presetId) {
+    if (isEditMode) {
+        // カスタムモードなら、スマホのファイル選択を開く
+        currentEditingIndex = index;
+        document.getElementById('avatar-file-input').click(); 
+    } else {
+        // 通常モードなら、アバターを変更してFirebaseへ送信
+        const img = document.getElementById(`preset-img-${index}`);
+        window.selectPresetAvatar(presetId, img.src); // 🌟 selectPresetAvatarの引数を少し変える必要があります
+    }
+}
+
+// 💡 以前作ったuploadOwnPhoto関数を、カスタム枠の上書きにも対応させる
+window.uploadOwnPhoto = function(input) {
+    if (!checkUploadLimit()) { alert("本日の変更回数の上限です"); return; }
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const newPhotoData = e.target.result; // 写真のデータ（Base64形式）
+
+            if (isEditMode && currentEditingIndex !== -1) {
+                // 【追加】カスタム枠の上書き処理
+                // 画面上のプリセット画像を書き換える
+                document.getElementById(`preset-img-${currentEditingIndex}`).src = newPhotoData;
+                // ブラウザ（LocalStorage）に永続保存する
+                localStorage.setItem(`customAvatar_${currentEditingIndex}`, newPhotoData);
+                alert(`${currentEditingIndex}番目の枠をカスタムしました！`);
+                toggleCustomMode(); // カスタムが終わったら通常モードに戻す
+                currentEditingIndex = -1;
+            } else {
+                // 【以前の処理】自分の写真を直接アイコンにする
+                document.getElementById('my-avatar-preview').src = newPhotoData;
+                const currentMsg = "新しい写真を設定したよ！📸";
+                window.saveDataToServer(currentMsg, "");
+                reduceUploadCount();
+                window.closeAvatarModal();
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// 3. 【重要】アプリ起動時にカスタムした画像を読み込む
+function loadCustomAvatars() {
+    for (let i = 1; i <= 6; i++) {
+        const savedData = localStorage.getItem(`customAvatar_${i}`);
+        if (savedData) {
+            document.getElementById(`preset-img-${i}`).src = savedData;
+        }
+    }
+}
+
+// 起動時に呼び出す（Firebase接続後など、適切なタイミングで）
+// loadCustomAvatars();
