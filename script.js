@@ -146,22 +146,27 @@ window.sendStatus = function() {
 // ==========================================================================
 // 5. アバター変更（プリセット）
 // ==========================================================================
-// ✨ アバターを選んだときの処理（カスタム画像にも対応版！）
+// ✨ アバターを選んだときの処理（エラー修正版！）
 window.selectPresetAvatar = function(presetId, customSrc) {
     // もしカスタムされた画像URL（Base64など）があればそれを使い、なければ元の画像パスを使う
     const finalAvatarSrc = customSrc || `image/${presetId}.png`;
     
     // 自分のプレビュー画像を書き換える
-    document.getElementById('my-avatar-preview').src = finalAvatarSrc;
+    const myPreview = document.getElementById('my-avatar-preview');
+    if (myPreview) {
+        myPreview.src = finalAvatarSrc;
+    }
     
     // サーバー（Firebase）に保存する
     const currentMsg = "アバターを変えたよ";
-    window.saveDataToServer(currentMsg, "");
     
-    // ポップアップを閉じる
-    window.closeAvatarModal();
-}
-// ==========================================================================
+    // 💡 ここがポイント！元の「saveDataToServer」の形に合わせて、window. を外して呼び出すよ
+    if (typeof saveDataToServer === "function") {
+        saveDataToServer(currentMsg, "");
+    } else if (typeof window.saveDataToServer === "function") {
+        window.saveDataToServer(currentMsg, "");
+    }
+}// ==========================================================================
 // 6. アバター変更（写真アップロード）
 // ==========================================================================
 window.uploadMyAvatarPhoto = function() {
