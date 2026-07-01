@@ -1,8 +1,8 @@
 // ==========================================================================
-// 🚨 Firebaseの機能をインターネットから読み込む設定
+// 🚨 Firebaseの機能をインターネットから読み込む設定（childを追加したよ！）
 // ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, child } from 
 
 // ⚠️あなたの「秘密の鍵」
 const firebaseConfig = {
@@ -378,7 +378,7 @@ window.uploadOwnPhoto = function(input) {
 }
 
 // ==========================================================================
-// 💡 【完全版】アバターの6枚枠をカスタムする魔法（外から見えるように強化！）
+// 💡 【ログイン版・無敵化】アバターの6枚枠をカスタムする魔法（10.8.0 最終決定版！）
 // ==========================================================================
 window.isEditMode = false;
 window.currentEditingIndex = -1;
@@ -406,79 +406,174 @@ window.toggleCustomMode = function() {
     }
 }
 
-// 2. 6つのアバター枠がクリックされたときの魔法（パッと閉じる魔法を追加！）
+// 2. 6つのアバター枠がクリックされたときの魔法
 window.handleAvatarClick = function(index, presetId) {
     if (window.isEditMode) {
-        // 【カスタムモード】なら、スマホのファイル選択（カメラロール）を開く
+        // 【カスタムモード】ならファイル選択を開く
         window.currentEditingIndex = index;
         const fileInput = document.getElementById('avatar-file-input');
         if (fileInput) fileInput.click(); 
     } else {
-        // 【通常モード】なら、アバターを確定してFirebaseへ送信
+        // 【通常モード】（アバターを決定するとき）
+        if (typeof checkUploadLimit === "function" && !checkUploadLimit()) {
+            alert("本日の変更回数の上限（3回）に達したため、変更できません。");
+            return;
+        }
+        
         const img = document.getElementById(`preset-img-${index}`);
         const customSrc = img ? img.src : null;
         window.selectPresetAvatar(presetId, customSrc);
+        
+        if (typeof reduceUploadCount === "function") {
+            reduceUploadCount();
+        }
 
-        // ✨【ここを追加！】アバターを決定したら、ポップアップを自動でパッと閉じる！
-        window.closeAvatarModal();
-    }
-}
-// 3. 【重要】自分の写真をアップロードしたときの処理（カスタム枠の上書きにも対応！）
-window.uploadOwnPhoto = function(input) {
-    if (typeof checkUploadLimit === "function" && !checkUploadLimit()) {
-        alert("本日の変更回数の上限です");
-        return;
-    }
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const newPhotoData = e.target.result;
-
-            if (window.isEditMode && window.currentEditingIndex !== -1) {
-                // 枠のカスタム処理
-                const presetImg = document.getElementById(`preset-img-${window.currentEditingIndex}`);
-                if (presetImg) presetImg.src = newPhotoData;
-                
-                // ブラウザに保存
-                localStorage.setItem(`customAvatar_${window.currentEditingIndex}`, newPhotoData);
-                alert(`${window.currentEditingIndex}番目の枠をカスタムしました！`);
-                
-                window.toggleCustomMode(); // 通常モードに戻す
-                window.currentEditingIndex = -1;
-            } else {
-                // 自分の写真を直接アイコンにする通常処理
-                const myPreview = document.getElementById('my-avatar-preview');
-                if (myPreview) myPreview.src = newPhotoData;
-                
-                const currentMsg = "新しい写真を設定したよ！📸";
-                window.saveDataToServer(currentMsg, "");
-                
-                if (typeof reduceUploadCount === "function") reduceUploadCount();
-                window.closeAvatarModal();
-            }
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
-// 4. アプリ起動時に過去にカスタムした画像を自動で読み込む魔法
-window.loadCustomAvatars = function() {
-    for (let i = 1; i <= 6; i++) {
-        const savedData = localStorage.getItem(`customAvatar_${i}`);
-        if (savedData) {
-            const presetImg = document.getElementById(`preset-img-${i}`);
-            if (presetImg) {
-                presetImg.src = savedData;
-            }
+        if (typeof window.closeAvatarModal === "function") {
+            window.closeAvatarModal();
         }
     }
 }
 
-// 画面が完全に読み込まれたら自動で過去のカスタムを反映する
+// ⏳ 写真をきれいに小さく圧縮（リサイズ）して超軽量化する魔法
+function compressImage(file, maxWidth, maxHeight, callback) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 画質を0.7（70%）までギュッと圧縮して文字データにする
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            callback(compressedDataUrl);
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// 3. 自分の写真をアップロードしたときの処理（データベース完全同期版！）
+window.uploadOwnPhoto = function(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        compressImage(file, 150, 150, function(compressedDataUrl) {
+            
+            if (window.isEditMode && window.currentEditingIndex !== -1) {
+                const index = window.currentEditingIndex;
+                const urlParams = new URLSearchParams(window.location.search);
+                const roomName = urlParams.get('room') || 'default_room';
+                
+                // 💡 Firebase 10.8.0 の標準的なパス指定方法（rooms/部屋名/custom_avatars/custom_番号）
+                if (typeof database !== "undefined" && database) {
+                    const customAvatarRef = ref(database, `rooms/${roomName}/custom_avatars/custom_${index}`);
+                    
+                    set(customAvatarRef, compressedDataUrl).then(() => {
+                        alert(`${index}番目の枠を保存しました！`);
+                        window.toggleCustomMode();
+                        window.currentEditingIndex = -1;
+                    }).catch((error) => {
+                        console.error("保存エラー:", error);
+                        alert("データベースへの保存でエラーが発生しました。");
+                    });
+                } else if (typeof roomRef !== "undefined" && roomRef) {
+                    // バックアップ：roomRefが使える場合
+                    const customAvatarRef = child(roomRef, `custom_avatars/custom_${index}`);
+                    set(customAvatarRef, compressedDataUrl).then(() => {
+                        alert(`${index}番目の枠を保存しました！`);
+                        window.toggleCustomMode();
+                        window.currentEditingIndex = -1;
+                    });
+                } else {
+                    localStorage.setItem(`customAvatar_${index}`, compressedDataUrl);
+                    alert(`${index}番目の枠をスマホに保存しました！`);
+                    window.toggleCustomMode();
+                    window.currentEditingIndex = -1;
+                }
+
+            } else {
+                // 【通常モード】自分の写真を直接アイコンにする処理
+                if (typeof checkUploadLimit === "function" && !checkUploadLimit()) {
+                    alert("本日の変更回数の上限です");
+                    return;
+                }
+
+                const myPreview = document.getElementById('my-avatar-preview');
+                if (myPreview) myPreview.src = compressedDataUrl;
+                
+                const currentMsg = "新しい写真を設定したよ！📸";
+                if (typeof saveDataToServer === "function") {
+                    saveDataToServer(currentMsg, "");
+                }
+                
+                if (typeof reduceUploadCount === "function") reduceUploadCount();
+                window.closeAvatarModal();
+            }
+        });
+    }
+}
+
+// 4. データベースからカスタム画像を自動でリアルタイムに読み込む魔法（10.8.0 完全対応版）
+window.loadCustomAvatars = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomName = urlParams.get('room') || 'default_room';
+    
+    if (typeof database !== "undefined" && database) {
+        const customAvatarsRef = ref(database, `rooms/${roomName}/custom_avatars`);
+        
+        // リアルタイムにデータベースを見張って、画像データを枠に流し込む
+        onValue(customAvatarsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                for (let i = 1; i <= 6; i++) {
+                    if (data[`custom_${i}`]) {
+                        const presetImg = document.getElementById(`preset-img-${i}`);
+                        if (presetImg) {
+                            presetImg.src = data[`custom_${i}`];
+                        }
+                    }
+                }
+            }
+        });
+    } else if (typeof roomRef !== "undefined" && roomRef) {
+        // バックアップ：roomRefから監視する場合
+        const customAvatarsRef = child(roomRef, 'custom_avatars');
+        onValue(customAvatarsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                for (let i = 1; i <= 6; i++) {
+                    if (data[`custom_${i}`]) {
+                        const presetImg = document.getElementById(`preset-img-${i}`);
+                        if (presetImg) { presetImg.src = data[`custom_${i}`]; }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// 画面読み込み時にお見張りスタート！
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         if (typeof window.loadCustomAvatars === "function") {
             window.loadCustomAvatars();
         }
-    }, 500);
+    }, 1000);
 });
