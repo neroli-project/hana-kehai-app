@@ -2,7 +2,8 @@
 // 🚨 Firebaseの機能をインターネットから読み込む設定（childを追加したよ！）
 // ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, child } from 
+import { getDatabase, ref, set, onValue, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
 
 // ⚠️あなたの「秘密の鍵」
 const firebaseConfig = {
