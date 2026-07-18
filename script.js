@@ -340,7 +340,7 @@ window.uploadOwnPhoto = function(input) {
 }
 
 // ==========================================================================
-// 💡 【ログインなし・シンプル部屋版】アバター＆文字カスタム完全復活魔法！
+// 💡 【ログインなし版・完全個室】アバター＆文字カスタムLocalStorage版魔法！
 // ==========================================================================
 
 // --- ⚙️ アバター用の設定群 ---
@@ -410,7 +410,7 @@ function compressImage(file, maxWidth, maxHeight, callback) {
     reader.readAsDataURL(file);
 }
 
-// 💡 修正ポイント：ログインなしなので、名前を使わず部屋直下に保存するよ！
+// 💡 修正ポイント：Firebaseではなく、このスマホ（LocalStorage）だけにこっそり保存！
 window.uploadOwnPhoto = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
@@ -420,14 +420,13 @@ window.uploadOwnPhoto = function(input) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const roomName = urlParams.get('room') || 'default_room';
                 
-                if (typeof database !== "undefined" && database) {
-                    const customAvatarRef = ref(database, `rooms/${roomName}/custom_avatars/custom_${index}`);
-                    set(customAvatarRef, compressedDataUrl).then(() => {
-                        alert(`${index}番目の枠をこのお部屋に保存しました！`);
-                        window.toggleCustomMode();
-                        window.currentEditingIndex = -1;
-                    }).catch((error) => { console.error("保存エラー:", error); });
-                }
+                // このスマホ専用の秘密の鍵名を作る
+                localStorage.setItem(`local_avatar_${roomName}_${index}`, compressedDataUrl);
+                
+                alert(`${index}番目の枠をあなたのスマホだけに保存しました！相手には見えません。`);
+                window.loadCustomAvatars(); // 画面をすぐ書き換え
+                window.toggleCustomMode();
+                window.currentEditingIndex = -1;
             } else {
                 if (typeof checkUploadLimit === "function" && !checkUploadLimit()) { alert("本日の変更回数の上限です"); return; }
                 const myPreview = document.getElementById('my-avatar-preview');
@@ -440,28 +439,22 @@ window.uploadOwnPhoto = function(input) {
     }
 };
 
+// 💡 修正ポイント：自分のスマホに保存した画像を読み込んで枠をハックするよ！
 window.loadCustomAvatars = function() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomName = urlParams.get('room') || 'default_room';
     
-    if (typeof database !== "undefined" && database) {
-        const customAvatarsRef = ref(database, `rooms/${roomName}/custom_avatars`);
-        onValue(customAvatarsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                for (let i = 1; i <= 6; i++) {
-                    if (data[`custom_${i}`]) {
-                        const presetImg = document.getElementById(`preset-img-${i}`);
-                        if (presetImg) presetImg.src = data[`custom_${i}`];
-                    }
-                }
-            }
-        });
+    for (let i = 1; i <= 6; i++) {
+        const savedData = localStorage.getItem(`local_avatar_${roomName}_${i}`);
+        if (savedData) {
+            const presetImg = document.getElementById(`preset-img-${i}`);
+            if (presetImg) presetImg.src = savedData;
+        }
     }
 };
 
 
-// --- ⚙️ 文字カスタム用の設定群 ---
+// --- ⚙️ 文字カスタム用の設定群（文字もこの部屋の全員で共有するならFirebaseのままでOK！） ---
 window.isTextEditMode = false;
 
 window.toggleTextCustomMode = function() {
