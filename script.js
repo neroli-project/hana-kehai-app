@@ -340,7 +340,7 @@ window.uploadOwnPhoto = function(input) {
 }
 
 // ==========================================================================
-// 💡 【バグ修正完了版】アバター枠・文字カスタム・自分専用完全分離魔法！
+// 💡 【ログインなし・シンプル部屋版】アバター＆文字カスタム完全復活魔法！
 // ==========================================================================
 
 // --- ⚙️ アバター用の設定群 ---
@@ -410,7 +410,7 @@ function compressImage(file, maxWidth, maxHeight, callback) {
     reader.readAsDataURL(file);
 }
 
-// 💡 修正ポイント：保存先URLに「/users/${myId}」を挟んで自分専用の枠にしたよ！
+// 💡 修正ポイント：ログインなしなので、名前を使わず部屋直下に保存するよ！
 window.uploadOwnPhoto = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
@@ -419,13 +419,11 @@ window.uploadOwnPhoto = function(input) {
                 const index = window.currentEditingIndex;
                 const urlParams = new URLSearchParams(window.location.search);
                 const roomName = urlParams.get('room') || 'default_room';
-                const userName = urlParams.get('myname') || 'default_user';
                 
                 if (typeof database !== "undefined" && database) {
-                    // 自分専用のフォルダの中にカスタムアバターを保存する
-                    const customAvatarRef = ref(database, `rooms/${roomName}/users/${userName}/custom_avatars/custom_${index}`);
+                    const customAvatarRef = ref(database, `rooms/${roomName}/custom_avatars/custom_${index}`);
                     set(customAvatarRef, compressedDataUrl).then(() => {
-                        alert(`${index}番目の枠をあなた専用に完全保存しました！`);
+                        alert(`${index}番目の枠をこのお部屋に保存しました！`);
                         window.toggleCustomMode();
                         window.currentEditingIndex = -1;
                     }).catch((error) => { console.error("保存エラー:", error); });
@@ -442,14 +440,12 @@ window.uploadOwnPhoto = function(input) {
     }
 };
 
-// 💡 修正ポイント：読み込み時も「自分専用のフォルダ」から画像を取ってくるようにしたよ！
 window.loadCustomAvatars = function() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomName = urlParams.get('room') || 'default_room';
-    const userName = urlParams.get('myname') || 'default_user';
     
     if (typeof database !== "undefined" && database) {
-        const customAvatarsRef = ref(database, `rooms/${roomName}/users/${userName}/custom_avatars`);
+        const customAvatarsRef = ref(database, `rooms/${roomName}/custom_avatars`);
         onValue(customAvatarsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -465,7 +461,7 @@ window.loadCustomAvatars = function() {
 };
 
 
-// --- ⚙️ 文字カスタム用の設定群（こちらも自分専用に分離！） ---
+// --- ⚙️ 文字カスタム用の設定群 ---
 window.isTextEditMode = false;
 
 window.toggleTextCustomMode = function() {
@@ -490,7 +486,6 @@ window.toggleTextCustomMode = function() {
 window.handleTextClick = function(index, defaultText) {
     const urlParams = new URLSearchParams(window.location.search);
     const roomName = urlParams.get('room') || 'default_room';
-    const userName = urlParams.get('myname') || 'default_user';
 
     if (window.isTextEditMode) {
         const currentBtn = document.getElementById(`status-btn-${index}`);
@@ -499,10 +494,9 @@ window.handleTextClick = function(index, defaultText) {
         
         if (newText !== null && newText.trim() !== "") {
             if (typeof database !== "undefined" && database) {
-                // 文字も自分専用のフォルダに保存！
-                const textRef = ref(database, `rooms/${roomName}/users/${userName}/custom_texts/text_${index}`);
+                const textRef = ref(database, `rooms/${roomName}/custom_texts/text_${index}`);
                 set(textRef, newText).then(() => {
-                    alert(`ボタンの文字を「${newText}」に完全保存しました！`);
+                    alert(`ボタンの文字を「${newText}」に保存しました！`);
                     window.toggleTextCustomMode();
                 }).catch((error) => { console.error("文字保存エラー:", error); });
             }
@@ -519,10 +513,9 @@ window.handleTextClick = function(index, defaultText) {
 window.loadCustomTexts = function() {
     const urlParams = new URLSearchParams(window.location.search);
     const roomName = urlParams.get('room') || 'default_room';
-    const userName = urlParams.get('myname') || 'default_user';
     
     if (typeof database !== "undefined" && database) {
-        const customTextsRef = ref(database, `rooms/${roomName}/users/${userName}/custom_texts`);
+        const customTextsRef = ref(database, `rooms/${roomName}/custom_texts`);
         onValue(customTextsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -537,35 +530,10 @@ window.loadCustomTexts = function() {
     }
 };
 
-
-window.loadMyPrivateDataOnce = function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomName = urlParams.get('room') || 'default_room';
-    const userName = urlParams.get('myname') || 'default_user';
-    
-    if (typeof database !== "undefined" && database) {
-        const myPrivateRef = ref(database, `rooms/${roomName}/users/${userName}`);
-        get(myPrivateRef).then((snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                if (data.avatar) {
-                    const myPreview = document.getElementById('my-avatar-preview');
-                    if (myPreview) myPreview.src = data.avatar;
-                }
-                if (data.message) {
-                    const myStatus = document.getElementById('my-current-status');
-                    if (myStatus) myStatus.innerText = data.message;
-                }
-            }
-        });
-    }
-};
-
-// 🎬 画面起動時にすべてを自動で読み込む
+// 🎬 画面起動時に自動読み込み
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         if (typeof window.loadCustomAvatars === "function") window.loadCustomAvatars();
         if (typeof window.loadCustomTexts === "function") window.loadCustomTexts();
-        if (typeof window.loadMyPrivateDataOnce === "function") window.loadMyPrivateDataOnce();
     }, 1000);
 });
