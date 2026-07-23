@@ -1,9 +1,10 @@
 // ==========================================================================
-// 🚨 Firebase 接続設定（プライベート固定お部屋版）
+// 🚨 Firebaseの機能をインターネットから読み込む設定（スッキリ修正版！）
 // ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, update, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, child, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+// ⚠️あなたの「秘密の鍵」
 const firebaseConfig = {
     apiKey: "AIzaSyB39eq-VQP8fZNjVdm7BnO7gKEMBibqqDo",
     authDomain: "hana-kehai-app.firebaseapp.com",
@@ -14,22 +15,55 @@ const firebaseConfig = {
     appId: "1:144341858428:web:3adb2679fad549895171f9"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
-
-// 💡 ログインなしプライベート版用の固定ID設定（URLパラメータがあればそちらを優先）
+const database = getDatabase(app);// ==========================================================================
+// 👥 【進化版】URLから「部屋名」と「自分の名前」を読み取る仕組み
+// ==========================================================================
 const urlParams = new URLSearchParams(window.location.search);
-const roomId = urlParams.get('room') || 'private_room';
-const myId = urlParams.get('myname') || 'user_a';
+let roomId = urlParams.get('room');   // 部屋の合言葉（例: neroli_cafe）
+let myId = urlParams.get('myname');   // 自分の名前（例: neroli）
 
-let myRef = ref(database, `rooms/${roomId}/users/${myId}`);
-let roomRef = ref(database, `rooms/${roomId}/users`);
+// もしURLに入力漏れがあったときのセーフティ
+if (!roomId) roomId = "default_room";
+if (!myId) myId = "user1";
+
+console.log(`現在の部屋: 【 ${roomId} 】 / あなたの名前: 【 ${myId} 】`);
+
+// データベースの保存先を『指定した部屋の中の、自分の名前の枠』にする
+const myRef = ref(database, `rooms/${roomId}/users/${myId}`);
+// 部屋全体のデータを監視するためのピン留め
+const roomRef = ref(database, `rooms/${roomId}/users`);
+
+let uploadLimit = 3;
 
 // ==========================================================================
-// 🛠️ 共通で使う関数（エフェクト＆メッセージ保存）
+// 🛠️ 共通で使う大事な関数
 // ==========================================================================
 
-window.triggerEffect = function(emojis) {
+// 自分のデータをFirebaseに送信（保存）する共通関数
+function saveDataToServer(messageText, effectEmoji) {
+    const currentAvatarSrc = document.getElementById('my-avatar-preview').src;
+    
+    const statusElement = document.getElementById('my-current-status');
+    if (statusElement) {
+        statusElement.innerText = messageText;
+    }
+    
+    set(myRef, {
+        avatar: currentAvatarSrc,
+        message: messageText,
+        effect: effectEmoji || "",
+        checked: false
+    }).then(() => {
+        console.log("Firebaseへの送信に成功！:", messageText);
+    }).catch((error) => {
+        console.error("Firebaseへの送信でエラー:", error);
+    });
+}
+
+// エフェクトを画面に出す関数
+function triggerEffect(emojis) {
     const effectLayer = document.getElementById('effect-layer');
     if (!effectLayer) return;
     
@@ -38,149 +72,202 @@ window.triggerEffect = function(emojis) {
     effectDiv.innerText = emojis;
     effectLayer.appendChild(effectDiv);
     setTimeout(() => { effectDiv.remove(); }, 2000);
-};
-
-window.saveDataToServer = function(messageText, effectEmoji) {
-    if (!myRef) return;
-    
-    const statusElement = document.getElementById('my-current-status');
-    if (statusElement) {
-        statusElement.innerText = messageText;
-    }
-    
-    update(myRef, {
-        message: messageText,
-        effect: effectEmoji || "",
-        checked: false
-    }).catch((error) => console.error("メッセージ保存エラー:", error));
-};
-
-window.openAvatarModal = function() { 
-    if (typeof window.loadCustomAvatars === "function") window.loadCustomAvatars();
-    const modal = document.getElementById('avatar-modal');
-    if (modal) modal.style.display = 'flex'; 
-};
-
-window.closeAvatarModal = function() { 
-    const modal = document.getElementById('avatar-modal');
-    if (modal) modal.style.display = 'none'; 
-};
-
-// ==========================================================================
-// 📡 リアルタイムデータ同期（自分と相手のデータを自動反映）
-// ==========================================================================
-if (roomRef) {
-    onValue(roomRef, (snapshot) => {
-        const allUsersData = snapshot.val();
-        if (allUsersData) {
-            // 👥 ① 相手のデータ
-            const userNames = Object.keys(allUsersData);
-            const partnerId = userNames.find(name => name !== myId);
-            
-            if (partnerId) {
-                const partnerData = allUsersData[partnerId];
-                
-                const partnerTitle = document.querySelector('#partner-area h2');
-                if (partnerTitle) partnerTitle.innerText = `${partnerId} のいま`;
-                
-                if (partnerData.avatar) {
-                    const partnerImg = document.getElementById('partner-avatar');
-                    if (partnerImg) partnerImg.src = partnerData.avatar;
-                }
-                if (partnerData.message) {
-                    const partnerMsg = document.getElementById('partner-message');
-                    if (partnerMsg) partnerMsg.innerText = partnerData.message;
-                }
-                if (partnerData.effect && partnerData.checked === false) {
-                    window.triggerEffect(partnerData.effect);
-                    update(ref(database, `rooms/${roomId}/users/${partnerId}`), { checked: true });
-                }
-            }
-
-            // 🙋‍♀️ ② 自分のデータ
-            if (myId && allUsersData[myId]) {
-                const myData = allUsersData[myId];
-                if (myData.avatar) {
-                    const myPreview = document.getElementById('my-avatar-preview');
-                    if (myPreview) myPreview.src = myData.avatar;
-                }
-                if (myData.message) {
-                    const myStatus = document.getElementById('my-current-status');
-                    if (myStatus) myStatus.innerText = myData.message;
-                }
-            }
-        }
-    });
 }
 
+// ポップアップ開閉（開く瞬間にカスタム写真を強制リロードする魔法を追加！）
+window.openAvatarModal = function() { 
+    // 💡 ポップアップを開く前に、過去にカスタムした写真をLocalStorageから確実に読み込む！
+    if (typeof window.loadCustomAvatars === "function") {
+        window.loadCustomAvatars();
+    }
+    
+    // ポップアップを表示する
+    document.getElementById('avatar-modal').style.display = 'flex'; 
+}
+
+window.closeAvatarModal = function() { 
+    document.getElementById('avatar-modal').style.display = 'none'; 
+}
 // ==========================================================================
-// 3. 状態ボタン＆メッセージ送信
+// 📡 【進化版】部屋にいる「自分以外の人（相手）」を自動で見つけて画面に映す
+// ==========================================================================
+onValue(roomRef, (snapshot) => {
+    const allUsersData = snapshot.val();
+    if (allUsersData) {
+        // 部屋にいる全員の名前リストを取り出して、自分以外の人の名前（partnerId）を探す
+        const userNames = Object.keys(allUsersData);
+        const partnerId = userNames.find(name => name !== myId);
+        
+        // もし自分以外の相手が見つかったら、その人のデータを画面の上半分に映す！
+        if (partnerId) {
+            const partnerData = allUsersData[partnerId];
+            
+            // 相手の名前を画面に表示（〇〇のいま を書き換える）
+            document.querySelector('#partner-area h2').innerText = `${partnerId} のいま`;
+            
+            if (partnerData.avatar) {
+                document.getElementById('partner-avatar').src = partnerData.avatar;
+            }
+            if (partnerData.message) {
+                document.getElementById('partner-message').innerText = partnerData.message;
+            }
+            if (partnerData.effect && partnerData.checked === false) {
+                triggerEffect(partnerData.effect);
+                // 相手が送ってきたエフェクトを「既読（true）」にする
+                set(ref(database, `rooms/${roomId}/users/${partnerId}/checked`), true);
+            }
+        }
+    }
+});
+
+// ==========================================================================
+// 3. 状態ボタンを押した時の処理
 // ==========================================================================
 window.changeStatus = function(statusText) {
     let effect = "";
     if (statusText.includes('まったり')) effect = '☕️🍀🏠';
-    else if (statusText.includes('勉強')) effect = '🔥💪😤';     
+    else if (statusText.includes('仕事頑張ってる')) effect = '🔥💪😤';
     else if (statusText.includes('パソコン')) effect = '💻👀⚡️';
-    else if (statusText.includes('おやつ')) effect = '🍰🍩🧋';
+    else if (statusText.includes('会いたい')) effect = '🍰🍩🧋';
     else if (statusText.includes('寝るね')) effect = '🌙💤⭐️';
-    else if (statusText.includes('愛してる')) effect = '❤️❤️❤️';    
-    else if (statusText.includes('大好き')) effect = '💖✨💘';  
+    else if (statusText.includes('愛してる')) effect = '❤️❤️❤️';
+    else if (statusText.includes('大好き')) effect = '💖✨💘';
 
-    window.triggerEffect(effect);
-    window.saveDataToServer(statusText, effect);
-};
-
+    triggerEffect(effect);
+    saveDataToServer(statusText, effect);
+}
+// ==========================================================================
+// 4. 自由入力のメッセージ送信
+// ==========================================================================
 window.sendStatus = function() {
     const messageInput = document.getElementById('my-message-text');
-    if (!messageInput || messageInput.value.trim() === "") {
+    if (messageInput.value.trim() === "") {
         alert("メッセージを入力してね！");
         return;
     }
-    const statusText = messageInput.value;
-    const statusElement = document.getElementById('my-current-status');
-    if (statusElement) statusElement.innerText = statusText;
-    
-    window.triggerEffect('✨🎉✨');
-    window.saveDataToServer(statusText, '✨🎉✨');
+    document.getElementById('my-current-status').innerText = messageInput.value;
+    triggerEffect('✨🎉✨');
+    saveDataToServer(messageInput.value, '✨🎉✨');
     messageInput.value = "";
-};
-
-window.selectPresetAvatar = function(presetId, customSrc) {
-    const finalAvatarSrc = customSrc || `image/${presetId}.png`;
-    const myPreview = document.getElementById('my-avatar-preview');
-    if (myPreview) myPreview.src = finalAvatarSrc;
-    
-    if (myRef) {
-        update(myRef, { avatar: finalAvatarSrc })
-            .catch((error) => console.error("保存エラー:", error));
-    }
-};
+}
 
 // ==========================================================================
-// 🔍 写真拡大モーダルの魔法（高解像度で大きめに表示！）
+// 5. アバター変更（プリセット）
+// ==========================================================================
+// ✨ アバターを選んだときの処理（エラー修正版！）
+window.selectPresetAvatar = function(presetId, customSrc) {
+    // もしカスタムされた画像URL（Base64など）があればそれを使い、なければ元の画像パスを使う
+    const finalAvatarSrc = customSrc || `image/${presetId}.png`;
+    
+    // 自分のプレビュー画像を書き換える
+    const myPreview = document.getElementById('my-avatar-preview');
+    if (myPreview) {
+        myPreview.src = finalAvatarSrc;
+    }
+    
+    // サーバー（Firebase）に保存する
+    const currentMsg = "アバターを変えたよ";
+    
+    // 💡 ここがポイント！元の「saveDataToServer」の形に合わせて、window. を外して呼び出すよ
+    if (typeof saveDataToServer === "function") {
+        saveDataToServer(currentMsg, "");
+    } else if (typeof window.saveDataToServer === "function") {
+        window.saveDataToServer(currentMsg, "");
+    }
+}// ==========================================================================
+// 6. アバター変更（写真アップロード）
+// ==========================================================================
+window.uploadMyAvatarPhoto = function() {
+    if (!checkUploadLimit()) return;
+    const fileInput = document.getElementById('avatar-file-input');
+    if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('my-avatar-preview').src = e.target.result;
+            saveDataToServer("新しい写真アバターにしたよ！", "📸");
+            reduceUploadCount();
+            closeAvatarModal();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    }
+}
+
+function checkUploadLimit() {
+    if (uploadLimit <= 0) {
+        alert("今日のアバター変更枠（3回）を使い切ったよ！");
+        closeAvatarModal();
+        return false;
+    }
+    return true;
+}
+
+function reduceUploadCount() {
+    uploadLimit--;
+    document.getElementById('upload-count').innerText = uploadLimit;
+}
+
+// ==========================================================================
+// 7. 背景写真アップロード
+// ==========================================================================
+window.uploadBackground = function() {
+    const photoInput = document.getElementById('bg-photo-input');
+    const appContainer = document.getElementById('app-container');
+    if (photoInput.files && photoInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            appContainer.style.backgroundImage = `url('${e.target.result}')`;
+            appContainer.style.backgroundSize = 'cover';
+            appContainer.style.backgroundPosition = 'center';
+            alert("背景画像を設定したよ！");
+        };
+        reader.readAsDataURL(photoInput.files[0]);
+    }
+}
+
+// ==========================================================================
+// 📡 【新機能】ページを開いた時に、自分の最新データをFirebaseから読み込んで復活させる
+// ==========================================================================
+onValue(myRef, (snapshot) => {
+    const myData = snapshot.val();
+    if (myData) {
+        // 1. 保存されていたメッセージを復活
+        if (myData.message) {
+            const statusElement = document.getElementById('my-current-status');
+            if (statusElement) {
+                statusElement.innerText = myData.message;
+            }
+        }
+        // 2. 保存されていたアバター画像を復活
+        if (myData.avatar) {
+            const avatarElement = document.getElementById('my-avatar-preview');
+            if (avatarElement) {
+                avatarElement.src = myData.avatar;
+            }
+        }
+    }
+});
+
+// ==========================================================================
+// 🔍 【追加コード】写真をタップした時に大きく拡大する魔法
 // ==========================================================================
 window.zoomPhoto = function(element) {
     const modal = document.getElementById('photo-zoom-modal');
     const zoomedImg = document.getElementById('zoomed-photo');
     if (modal && zoomedImg) {
         zoomedImg.src = element.src;
-        // 💡 画面いっぱいに大きめで見やすくスタイル調整！
-        zoomedImg.style.maxWidth = '90vw';
-        zoomedImg.style.maxHeight = '80vh';
-        zoomedImg.style.objectFit = 'contain';
-        zoomedImg.style.borderRadius = '16px';
-        
         modal.style.display = 'flex';
     }
-};
+}
 
 window.closeZoomModal = function() {
     const modal = document.getElementById('photo-zoom-modal');
-    if (modal) modal.style.display = 'none';
-};
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
 
 // ==========================================================================
-// 📸 タブ切り替え機能
+// 📸 インスタ風画面切り替え（タブ機能）の魔法
 // ==========================================================================
 window.switchTab = function(tabName) {
     const myArea = document.getElementById('my-area');
@@ -211,8 +298,9 @@ window.switchTab = function(tabName) {
             tabMyBtn.style.borderBottom = '3px solid transparent';
         }
     }
-};
+}
 
+// アプリを開いた瞬間に、自動で「あいて」のタブを最初に選んでおく魔法
 window.addEventListener('DOMContentLoaded', () => {
     if (typeof window.switchTab === 'function') {
         window.switchTab('partner');
@@ -220,8 +308,42 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// 🖼️ 画像圧縮＆カスタム枠機能（拡大用に画質・サイズを大幅アップ！）
+// 📸 【復活！】自分の写真を読み込んでセットする魔法
 // ==========================================================================
+window.uploadOwnPhoto = function(input) {
+    if (!checkUploadLimit()) {
+        alert("本日の変更回数の上限です");
+        return;
+    }
+
+    // 写真がちゃんと選ばれているかチェック
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+
+        // 写真の読み込みが完了した時の処理
+        reader.onload = function(e) {
+            // 自分のアバタープレビューを、選んだ写真に書き換える
+            document.getElementById('my-avatar-preview').src = e.target.result;
+
+            // Firebaseのサーバーにも、この写真のデータを送信する
+            const currentMsg = "新しい写真を設定したよ！📸";
+            window.saveDataToServer(currentMsg, "");
+
+            // 制限回数を減らしてモーダルを閉じる
+            reduceUploadCount();
+            window.closeAvatarModal();
+        };
+
+        // 写真をデータとして読み込む
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// ==========================================================================
+// 💡 【ログインなし版・完全個室】アバター＆文字カスタムLocalStorage版魔法！
+// ==========================================================================
+
+// --- ⚙️ アバター用の設定群 ---
 window.isEditMode = false;
 window.currentEditingIndex = -1;
 
@@ -252,14 +374,18 @@ window.handleAvatarClick = function(index, presetId) {
         const fileInput = document.getElementById('avatar-file-input');
         if (fileInput) fileInput.click(); 
     } else {
+        if (typeof checkUploadLimit === "function" && !checkUploadLimit()) {
+            alert("本日の変更回数の上限（3回）に達したため、変更できません。");
+            return;
+        }
         const img = document.getElementById(`preset-img-${index}`);
         const customSrc = img ? img.src : null;
         window.selectPresetAvatar(presetId, customSrc);
+        if (typeof reduceUploadCount === "function") reduceUploadCount();
         if (typeof window.closeAvatarModal === "function") window.closeAvatarModal();
     }
 };
 
-// 💡 拡大表示しても綺麗なように最大「500x500」ピクセルで高品質保存！
 function compressImage(file, maxWidth, maxHeight, callback) {
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -276,8 +402,7 @@ function compressImage(file, maxWidth, maxHeight, callback) {
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            // 画質0.85の高画質で保存
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
             callback(compressedDataUrl);
         };
         img.src = event.target.result;
@@ -285,64 +410,51 @@ function compressImage(file, maxWidth, maxHeight, callback) {
     reader.readAsDataURL(file);
 }
 
-// 📸 自分の写真をセットする魔法（サイズ500pxに拡大！）
+// 💡 修正ポイント：Firebaseではなく、このスマホ（LocalStorage）だけにこっそり保存！
 window.uploadOwnPhoto = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        // 💡 500x500の高画質サイズに設定！
-        compressImage(file, 500, 500, function(compressedDataUrl) {
+        compressImage(file, 150, 150, function(compressedDataUrl) {
             if (window.isEditMode && window.currentEditingIndex !== -1) {
                 const index = window.currentEditingIndex;
-                if (typeof database !== "undefined" && database) {
-                    const customAvatarRef = ref(database, `rooms/${roomId}/users/${myId}/custom_avatars/custom_${index}`);
-                    set(customAvatarRef, compressedDataUrl).then(() => {
-                        alert(`${index}番目の枠をあなた専用に完全保存しました！`);
-                        window.toggleCustomMode();
-                        window.currentEditingIndex = -1;
-                    }).catch((error) => console.error("保存エラー:", error));
-                }
+                const urlParams = new URLSearchParams(window.location.search);
+                const roomName = urlParams.get('room') || 'default_room';
+                
+                // このスマホ専用の秘密の鍵名を作る
+                localStorage.setItem(`local_avatar_${roomName}_${index}`, compressedDataUrl);
+                
+                alert(`${index}番目の枠をあなたのスマホだけに保存しました！相手には見えません。`);
+                window.loadCustomAvatars(); // 画面をすぐ書き換え
+                window.toggleCustomMode();
+                window.currentEditingIndex = -1;
             } else {
+                if (typeof checkUploadLimit === "function" && !checkUploadLimit()) { alert("本日の変更回数の上限です"); return; }
                 const myPreview = document.getElementById('my-avatar-preview');
                 if (myPreview) myPreview.src = compressedDataUrl;
-                
-                if (myRef) {
-                    update(myRef, { avatar: compressedDataUrl })
-                        .then(() => {
-                            console.log("高画質写真の更新完了！");
-                            window.closeAvatarModal();
-                        })
-                        .catch((error) => {
-                            console.error("保存エラー:", error);
-                            window.closeAvatarModal();
-                        });
-                } else {
-                    window.closeAvatarModal();
-                }
+                if (typeof saveDataToServer === "function") { saveDataToServer("新しい写真を設定したよ！📸", ""); }
+                if (typeof reduceUploadCount === "function") reduceUploadCount();
+                window.closeAvatarModal();
             }
         });
     }
 };
 
+// 💡 修正ポイント：自分のスマホに保存した画像を読み込んで枠をハックするよ！
 window.loadCustomAvatars = function() {
-    if (typeof database !== "undefined" && database) {
-        const customAvatarsRef = ref(database, `rooms/${roomId}/users/${myId}/custom_avatars`);
-        onValue(customAvatarsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                for (let i = 1; i <= 6; i++) {
-                    if (data[`custom_${i}`]) {
-                        const presetImg = document.getElementById(`preset-img-${i}`);
-                        if (presetImg) presetImg.src = data[`custom_${i}`];
-                    }
-                }
-            }
-        });
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomName = urlParams.get('room') || 'default_room';
+    
+    for (let i = 1; i <= 6; i++) {
+        const savedData = localStorage.getItem(`local_avatar_${roomName}_${i}`);
+        if (savedData) {
+            const presetImg = document.getElementById(`preset-img-${i}`);
+            if (presetImg) presetImg.src = savedData;
+        }
     }
 };
 
-// ==========================================================================
-// ✏️ 文字カスタム＆画面初期化
-// ==========================================================================
+
+// --- ⚙️ 文字カスタム用の設定群（文字もこの部屋の全員で共有するならFirebaseのままでOK！） ---
 window.isTextEditMode = false;
 
 window.toggleTextCustomMode = function() {
@@ -365,6 +477,9 @@ window.toggleTextCustomMode = function() {
 };
 
 window.handleTextClick = function(index, defaultText) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomName = urlParams.get('room') || 'default_room';
+
     if (window.isTextEditMode) {
         const currentBtn = document.getElementById(`status-btn-${index}`);
         const currentText = currentBtn ? currentBtn.innerText : defaultText;
@@ -372,10 +487,9 @@ window.handleTextClick = function(index, defaultText) {
         
         if (newText !== null && newText.trim() !== "") {
             if (typeof database !== "undefined" && database) {
-                const textRef = ref(database, `rooms/${roomId}/users/${myId}/custom_texts/text_${index}`);
+                const textRef = ref(database, `rooms/${roomName}/custom_texts/text_${index}`);
                 set(textRef, newText).then(() => {
-                    alert(`ボタンの文字を「${newText}」に完全保存しました！`);
-                    if (currentBtn) currentBtn.innerText = newText;
+                    alert(`ボタンの文字を「${newText}」に保存しました！`);
                     window.toggleTextCustomMode();
                 }).catch((error) => { console.error("文字保存エラー:", error); });
             }
@@ -383,18 +497,18 @@ window.handleTextClick = function(index, defaultText) {
     } else {
         const currentBtn = document.getElementById(`status-btn-${index}`);
         const selectedText = currentBtn ? currentBtn.innerText : defaultText;
-        
-        if (typeof window.changeStatus === "function") {
-            window.changeStatus(selectedText);
-        } else if (typeof saveDataToServer === "function") {
+        if (typeof saveDataToServer === "function") {
             saveDataToServer(selectedText, "");
         }
     }
 };
 
 window.loadCustomTexts = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomName = urlParams.get('room') || 'default_room';
+    
     if (typeof database !== "undefined" && database) {
-        const customTextsRef = ref(database, `rooms/${roomId}/users/${myId}/custom_texts`);
+        const customTextsRef = ref(database, `rooms/${roomName}/custom_texts`);
         onValue(customTextsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -409,29 +523,10 @@ window.loadCustomTexts = function() {
     }
 };
 
-window.loadMyPrivateDataOnce = function() {
-    if (typeof database !== "undefined" && database) {
-        get(myRef).then((snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                if (data.avatar) {
-                    const myPreview = document.getElementById('my-avatar-preview');
-                    if (myPreview) myPreview.src = data.avatar;
-                }
-                if (data.message) {
-                    const myStatus = document.getElementById('my-current-status');
-                    if (myStatus) myStatus.innerText = data.message;
-                }
-            }
-        });
-    }
-};
-
-// 🎬 画面起動時に初期データを読み込む
+// 🎬 画面起動時に自動読み込み
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         if (typeof window.loadCustomAvatars === "function") window.loadCustomAvatars();
         if (typeof window.loadCustomTexts === "function") window.loadCustomTexts();
-        if (typeof window.loadMyPrivateDataOnce === "function") window.loadMyPrivateDataOnce();
     }, 1000);
 });
